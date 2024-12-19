@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Truth Table</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f7f7f7;
+        user-select: none;
+      }
+
+      h1 {
+        text-align: center;
+        margin: 20px 0;
+        font-size: 2em;
+        color: #333;
+      }
+
+      p {
+        text-align: center;
+        margin: 0;
+        color: #333;
+        font-size: 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .controls {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 1em;
+      }
+
+      .control-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+      }
+
+      .control-group span {
+        font-weight: bold;
+        font-size: 1.2em;
+        color: #333;
+      }
+
+      .control-group button {
+        border: none;
+        background: #007bff;
+        color: #fff;
+        font-size: 1em;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .control-group button:hover {
+        background: #0056b3;
+      }
+
+      table {
+        border-collapse: collapse;
+        margin: 20px auto;
+        text-align: center;
+        background: #fff;
+        border-radius: 5px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 0.5em 1em;
+        min-width: 50px;
+      }
+
+      th {
+        background: #eee;
+        font-weight: bold;
+        position: relative;
+      }
+
+      th[contenteditable="true"] {
+        background: #eef;
+        cursor: text;
+      }
+
+      th[contenteditable="true"]:hover {
+        background: #ddebff;
+      }
+
+      th[contenteditable="true"]:focus {
+        outline: 2px solid #66afe9;
+      }
+
+      td {
+        cursor: default;
+      }
+
+      td.output-cell {
+        cursor: pointer;
+        background: #fdfdfd;
+      }
+
+      td.output-cell:hover {
+        background: #ddeeff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Truth Table</h1>
+    <p>
+      This is a tool designed for creating and visualizing truth tables
+      efficiently
+    </p>
+    <div class="container">
+      <div class="controls">
+        <div class="control-group">
+          <button id="minusVarBtn">-</button>
+          <span>Variables: <span id="varCount">1</span></span>
+          <button id="plusVarBtn">+</button>
+        </div>
+
+        <div class="control-group">
+          <button id="minusOutBtn">-</button>
+          <span>Outputs: <span id="outCount">1</span></span>
+          <button id="plusOutBtn">+</button>
+        </div>
+      </div>
+
+      <div id="tableContainer"></div>
+    </div>
+
+    <script>
+      (function () {
+        let variableCount = 1;
+        let outputCount = 1;
+
+        // 初期名を保持する配列
+        let variableNames = ["Var1"];
+        let outputNames = ["Output"];
+
+        const varCountSpan = document.getElementById("varCount");
+        const outCountSpan = document.getElementById("outCount");
+        const minusVarBtn = document.getElementById("minusVarBtn");
+        const plusVarBtn = document.getElementById("plusVarBtn");
+        const minusOutBtn = document.getElementById("minusOutBtn");
+        const plusOutBtn = document.getElementById("plusOutBtn");
+        const tableContainer = document.getElementById("tableContainer");
+
+        // テーブル更新関数
+        function updateTable() {
+          const rowCount = Math.pow(2, variableCount);
+          const table = document.createElement("table");
+          const thead = document.createElement("thead");
+          const tbody = document.createElement("tbody");
+
+          // 必要数だけ variableNames と outputNamesを補完
+          while (variableNames.length < variableCount) {
+            variableNames.push("Var" + (variableNames.length + 1));
+          }
+          while (variableNames.length > variableCount) {
+            variableNames.pop();
+          }
+
+          while (outputNames.length < outputCount) {
+            outputNames.push("Output" + (outputNames.length + 1));
+          }
+          while (outputNames.length > outputCount) {
+            outputNames.pop();
+          }
+
+          // ヘッダー行作成
+          const headerRow = document.createElement("tr");
+          for (let i = 0; i < variableCount; i++) {
+            const th = document.createElement("th");
+            th.textContent = variableNames[i];
+            th.contentEditable = "true";
+            addNameChangeListener(th, i, true); // true indicates variable
+            headerRow.appendChild(th);
+          }
+          for (let j = 0; j < outputCount; j++) {
+            const th = document.createElement("th");
+            th.textContent = outputNames[j];
+            th.contentEditable = "true";
+            addNameChangeListener(th, j, false); // false indicates output
+            headerRow.appendChild(th);
+          }
+          thead.appendChild(headerRow);
+
+          // ボディ行作成
+          for (let r = 0; r < rowCount; r++) {
+            const row = document.createElement("tr");
+            // ビットパターン部分
+            for (let c = 0; c < variableCount; c++) {
+              const bit = (r >> (variableCount - 1 - c)) & 1;
+              const td = document.createElement("td");
+              td.textContent = bit;
+              td.style.cursor = "default";
+              td.style.userSelect = "none";
+              row.appendChild(td);
+            }
+
+            // Outputセル（複数対応）
+            for (let o = 0; o < outputCount; o++) {
+              const outputTd = document.createElement("td");
+              outputTd.textContent = "0";
+              outputTd.classList.add("output-cell");
+              outputTd.addEventListener("click", function () {
+                this.textContent = this.textContent === "0" ? "1" : "0";
+              });
+              row.appendChild(outputTd);
+            }
+
+            tbody.appendChild(row);
+          }
+
+          table.appendChild(thead);
+          table.appendChild(tbody);
+
+          tableContainer.innerHTML = "";
+          tableContainer.appendChild(table);
+        }
+
+        // ヘッダーセルの編集内容反映関数
+        function addNameChangeListener(th, index, isVariable) {
+          th.addEventListener("input", function () {
+            if (isVariable) {
+              variableNames[index] = th.textContent;
+            } else {
+              outputNames[index] = th.textContent;
+            }
+          });
+        }
+
+        // 初期描画
+        updateTable();
+
+        plusVarBtn.addEventListener("click", () => {
+          variableCount++;
+          varCountSpan.textContent = variableCount;
+          updateTable();
+        });
+
+        minusVarBtn.addEventListener("click", () => {
+          if (variableCount > 1) {
+            variableCount--;
+            varCountSpan.textContent = variableCount;
+            updateTable();
+          }
+        });
+
+        plusOutBtn.addEventListener("click", () => {
+          outputCount++;
+          outCountSpan.textContent = outputCount;
+          updateTable();
+        });
+
+        minusOutBtn.addEventListener("click", () => {
+          if (outputCount > 1) {
+            outputCount--;
+            outCountSpan.textContent = outputCount;
+            updateTable();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
